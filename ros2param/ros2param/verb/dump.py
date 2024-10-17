@@ -46,6 +46,19 @@ class DumpVerb(VerbExtension):
             '--timeout', metavar='N', type=int, default=1,
             help='Wait for N seconds until node becomes available (default %(default)s sec)')
 
+    @staticmethod
+    def get_parameter_values(node, node_name, params):
+        response = call_get_parameters(
+            node=node, node_name=node_name,
+            parameter_names=params)
+
+        # requested parameter not set
+        if not response.values:
+            return None
+
+        # extract type specific value
+        return [get_value(parameter_value=i) for i in response.values]
+
     def insert_dict(self, dictionary, key, value):
         split = key.split(PARAMETER_SEPARATOR_STRING, 1)
         if len(split) > 1:
@@ -67,7 +80,7 @@ class DumpVerb(VerbExtension):
         with DirectNode(args) as node:
             yaml_output = {node_name.full_name: {'ros__parameters': {}}}
 
-            # retrieve parameter names
+            # retrieve values
             response = call_list_parameters(node=node, node_name=absolute_node_name)
             if response is None:
                 print(
@@ -80,26 +93,17 @@ class DumpVerb(VerbExtension):
                     'Exception while calling list_parameters service of node '
                     f"'{node_name.full_name}': {e}", file=sys.stderr)
                 return
-            parameter_names = sorted(response.result().result.names)
 
-            # retrieve parameter values
-            response = None
-            try:
-                response = call_get_parameters(
-                    node=node, node_name=absolute_node_name, parameter_names=parameter_names)
-            except RuntimeError as e:
+            response = response.result().result.names
+            response = sorted(response)
+            parameter_values = self.get_parameter_values(node, absolute_node_name, response)
+            if parameter_values is None:
                 print(
                     'Exception while calling get_parameters service of node '
                     f"'{node_name.full_name}': {e}", file=sys.stderr)
                 return
-            if response.values is None:
-                # pass through here, no parameters are available with this node.
-                # since this is not failure, it proceeds to print the yaml as consistent behavior.
-                pass
-            parameter_values = [get_value(parameter_value=i) for i in response.values]
 
-            # create dictionary with parameter names and values
-            for param_name, pval in zip(parameter_names, parameter_values):
+            for param_name, pval in zip(response, parameter_values):
                 self.insert_dict(
                     yaml_output[node_name.full_name]['ros__parameters'], param_name, pval)
 
