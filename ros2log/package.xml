@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ros2log</name>
+  <version>0.40.4</version>
+  <description>The log command for ROS 2 command line tools.</description>
+  <maintainer email="tomoya.fujita825@gmail.com">Tomoya Fujita</maintainer>
+  <license>Apache License 2.0</license>
+
+  <author email="tomoya.fujita825@gmail.com">Tomoya Fujita</author>
+  <author email="fumiya-onishi@keio.jp">Fumiya Ohnishi</author>
+
+  <depend>rcl_interfaces</depend>
+  <depend>rclpy</depend>
+  <depend>ros2cli</depend>
+  <depend>rosgraph_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>ament_xmllint</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
