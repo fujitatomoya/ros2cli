@@ -22,6 +22,8 @@ class LogCommand(CommandExtension):
     def add_arguments(self, parser, cli_name):
         self._subparser = parser
 
+        # TODO(@fujitatomoya): add common log level arguments here
+
         # add arguments and sub-commands of verbs
         add_subparsers_on_demand(
             parser, cli_name, '_verb', 'ros2log.verb', required=False)
