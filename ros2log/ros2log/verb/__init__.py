@@ -26,9 +26,8 @@ class VerbExtension:
     The following methods can be defined:
     * `main` - handles CLI invocation
 
-    The following keyword arguments are passed to verb extensions:
-    * `args` - command-line arguments as argparse.Namespace
-
+    The following methods can be defined:
+    * `add_arguments`
     """
 
     NAME = None
@@ -37,6 +36,9 @@ class VerbExtension:
     def __init__(self):
         super(VerbExtension, self).__init__()
         satisfies_version(PLUGIN_SYSTEM_VERSION, '^0.1')
+
+    def add_arguments(self, parser, cli_name):
+        pass
 
     def main(self, *, args):
         raise NotImplementedError()

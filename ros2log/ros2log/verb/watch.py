@@ -23,8 +23,7 @@ from rclpy.qos import QoSDurabilityPolicy
 
 from rcl_interfaces.msg import Log
 
-from ros2cli.node.strategy import add_arguments as add_strategy_node_arguments
-from ros2cli.node.strategy import NodeStrategy
+from ros2cli.node.direct import DirectNode
 
 from ros2log.verb import VerbExtension
 
@@ -67,8 +66,6 @@ class WatchVerb(VerbExtension):
     """Monitor and display logs in real-time."""
 
     def add_arguments(self, parser, cli_name):
-        add_strategy_node_arguments(parser)
-
         parser.add_argument(
             '--level',
             type=str,
@@ -81,7 +78,8 @@ class WatchVerb(VerbExtension):
         parser.add_argument(
             '--regex',
             type=str,
-            help='Filter log messages matching the specified regular expression pattern')
+            help='Filter log messages matching the specified regular expression pattern. '
+                 'e.g. "topic.*(/\\w+)"')
         parser.add_argument(
             '--no-color',
             action='store_true',
@@ -99,7 +97,7 @@ class WatchVerb(VerbExtension):
             help='Output function name, file, and line number')
 
     def main(self, *, args):
-        with NodeStrategy(args) as node:
+        with DirectNode(args) as node:
             watcher = LogWatcher(
                 node,
                 level_filter=args.level,
