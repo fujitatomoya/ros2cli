@@ -16,12 +16,12 @@ import re
 import sys
 from typing import Optional
 
+from rcl_interfaces.msg import Log
+
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
 from rclpy.qos import QoSDurabilityPolicy
-
-from rcl_interfaces.msg import Log
+from rclpy.qos import QoSProfile
 
 from ros2cli.node.direct import DirectNode
 
@@ -98,7 +98,7 @@ class WatchVerb(VerbExtension):
 
     def main(self, *, args):
         with DirectNode(args) as node:
-            watcher = LogWatcher(
+            LogWatcher(
                 node,
                 level_filter=args.level,
                 logger_filter=args.logger,
@@ -107,7 +107,7 @@ class WatchVerb(VerbExtension):
                 show_timestamp=not args.no_timestamp,
                 show_function_detail=args.function_detail,
             )
-            
+
             try:
                 rclpy.spin(node)
             except KeyboardInterrupt:
@@ -166,7 +166,7 @@ class LogWatcher:
         )
 
     def _log_callback(self, msg: Log):
-        """Callback for processing log messages."""
+        """Process log messages."""
         # Apply level filter
         if msg.level < self.min_level:
             return

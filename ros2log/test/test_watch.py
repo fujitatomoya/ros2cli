@@ -15,7 +15,6 @@
 from io import StringIO
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
 
 from rcl_interfaces.msg import Log
 import rclpy
@@ -57,7 +56,9 @@ class TestWatchVerb(unittest.TestCase):
         # Create test log messages
         debug_msg = Log(level=Log.DEBUG, name='test_logger', msg='Debug message')
         info_msg = Log(level=Log.INFO, name='test_logger', msg='Info message')
+        warn_msg = Log(level=Log.WARN, name='test_logger', msg='Warn message')
         error_msg = Log(level=Log.ERROR, name='test_logger', msg='Error message')
+        fatal_msg = Log(level=Log.FATAL, name='test_logger', msg='Fatal message')
 
         # Capture stdout
         captured_output = StringIO()
@@ -66,7 +67,9 @@ class TestWatchVerb(unittest.TestCase):
         # Send messages through callback
         watcher._log_callback(debug_msg)
         watcher._log_callback(info_msg)
+        watcher._log_callback(warn_msg)
         watcher._log_callback(error_msg)
+        watcher._log_callback(fatal_msg)
 
         # Restore stdout
         sys.stdout = sys.__stdout__
@@ -75,7 +78,9 @@ class TestWatchVerb(unittest.TestCase):
         output = captured_output.getvalue()
         self.assertNotIn('Debug message', output)
         self.assertNotIn('Info message', output)
+        self.assertNotIn('Warn message', output)
         self.assertIn('Error message', output)
+        self.assertIn('Fatal message', output)
 
     def test_logger_filter(self):
         """Test that logger name filtering works correctly."""
