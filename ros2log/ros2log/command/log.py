@@ -22,7 +22,12 @@ class LogCommand(CommandExtension):
     def add_arguments(self, parser, cli_name):
         self._subparser = parser
 
-        # TODO(@fujitatomoya): add common log level arguments here
+        # Add global debug flag for all log subcommands
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            default=False,
+            help='Enable debug output for verbose information')
 
         # add arguments and sub-commands of verbs
         add_subparsers_on_demand(
