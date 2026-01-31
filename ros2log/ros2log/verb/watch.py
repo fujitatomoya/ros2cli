@@ -20,10 +20,11 @@ from rcl_interfaces.msg import Log
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSDurabilityPolicy
-from rclpy.qos import QoSProfile
+from rclpy.qos import qos_profile_system_default
 
 from ros2cli.node.direct import DirectNode
+from ros2cli.qos import add_qos_arguments
+from ros2cli.qos import choose_qos
 
 from ros2log.verb import VerbExtension
 
@@ -95,9 +96,15 @@ class WatchVerb(VerbExtension):
             action='store_true',
             default=False,
             help='Output function name, file, and line number')
+        add_qos_arguments(
+            parser,
+            entity_type='subscribe',
+            default_profile_str='system_default')
 
     def main(self, *, args):
         with DirectNode(args) as node:
+            # Configure QoS profile based on arguments and available publishers
+            qos_profile = choose_qos(node, '/rosout', args)
             LogWatcher(
                 node,
                 level_filter=args.level,
@@ -106,6 +113,7 @@ class WatchVerb(VerbExtension):
                 enable_color=not args.no_color,
                 show_timestamp=not args.no_timestamp,
                 show_function_detail=args.function_detail,
+                qos_profile=qos_profile,
             )
 
             try:
@@ -128,6 +136,7 @@ class LogWatcher:
         enable_color: bool = True,
         show_timestamp: bool = True,
         show_function_detail: bool = False,
+        qos_profile=qos_profile_system_default,
     ):
         self.node = node
         self.enable_color = enable_color
@@ -149,15 +158,7 @@ class LogWatcher:
                 node.get_logger().error(f'Invalid regex pattern: {e}')
                 sys.exit(1)
 
-        # Create subscription to /rosout with transient local durability
-        # to receive existing messages as well
-        qos_profile = QoSProfile(
-            depth=10,
-            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )
-
-        # Try to create content filtered subscription if supported
-        # For now, we'll use regular subscription and do client-side filtering
+        # Create subscription to /rosout
         self.subscription = node.create_subscription(
             Log,
             '/rosout',
