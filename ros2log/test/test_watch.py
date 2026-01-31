@@ -51,6 +51,7 @@ class TestWatchVerb(unittest.TestCase):
             level_filter='ERROR',
             enable_color=False,
             show_timestamp=False,
+            enable_content_filter=False,
         )
 
         # Create test log messages
@@ -89,6 +90,7 @@ class TestWatchVerb(unittest.TestCase):
             logger_filter='my_logger',
             enable_color=False,
             show_timestamp=False,
+            enable_content_filter=False,
         )
 
         # Create test log messages
@@ -118,6 +120,7 @@ class TestWatchVerb(unittest.TestCase):
             regex_filter='sensor.*timeout',
             enable_color=False,
             show_timestamp=False,
+            enable_content_filter=False,
         )
 
         # Create test log messages
@@ -152,6 +155,7 @@ class TestWatchVerb(unittest.TestCase):
             regex_filter='camera',
             enable_color=False,
             show_timestamp=False,
+            enable_content_filter=False,
         )
 
         # Create test log messages
@@ -185,6 +189,7 @@ class TestWatchVerb(unittest.TestCase):
             self.node,
             enable_color=False,
             show_timestamp=False,
+            enable_content_filter=False,
         )
 
         msg = Log(level=Log.ERROR, name='test', msg='Test message')
@@ -209,6 +214,7 @@ class TestWatchVerb(unittest.TestCase):
             enable_color=False,
             show_timestamp=False,
             show_function_detail=True,
+            enable_content_filter=False,
         )
 
         msg = Log(

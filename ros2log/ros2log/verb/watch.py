@@ -20,7 +20,7 @@ from rcl_interfaces.msg import Log
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_system_default
+from rclpy.qos import qos_profile_rosout_default
 
 from ros2cli.node.direct import DirectNode
 from ros2cli.qos import add_qos_arguments
@@ -99,7 +99,7 @@ class WatchVerb(VerbExtension):
         add_qos_arguments(
             parser,
             entity_type='subscribe',
-            default_profile_str='system_default')
+            default_profile_str='rosout_default')
 
     def main(self, *, args):
         with DirectNode(args) as node:
@@ -114,6 +114,7 @@ class WatchVerb(VerbExtension):
                 show_timestamp=not args.no_timestamp,
                 show_function_detail=args.function_detail,
                 qos_profile=qos_profile,
+                debug=args.debug,
             )
 
             try:
@@ -136,12 +137,15 @@ class LogWatcher:
         enable_color: bool = True,
         show_timestamp: bool = True,
         show_function_detail: bool = False,
-        qos_profile=qos_profile_system_default,
+        qos_profile=qos_profile_rosout_default,
+        enable_content_filter: bool = True,
+        debug: bool = False,
     ):
         self.node = node
         self.enable_color = enable_color
         self.show_timestamp = show_timestamp
         self.show_function_detail = show_function_detail
+        self.debug = debug
 
         # Set up level filter
         self.min_level = LOG_LEVELS.get(level_filter, Log.DEBUG) if level_filter else Log.DEBUG
@@ -165,6 +169,59 @@ class LogWatcher:
             self._log_callback,
             qos_profile
         )
+
+        # Try to set content filter for performance optimization
+        # This filters at RMW level if supported, reducing network traffic and CPU usage
+        if enable_content_filter:
+            self._setup_content_filter()
+
+    def _setup_content_filter(self):
+        """
+        Set up content filter for log level and logger name if supported by RMW.
+
+        Content filtering is a DDS feature that filters messages at the middleware level,
+        reducing network traffic and CPU usage. Currently, only DDS-based RMW implementations
+        (e.g., FastDDS, Connext DDS) support this feature. DDS specifications limit the number
+        of expression parameters to 100 at a time. If content filtering is not supported or
+        fails, the implementation automatically falls back to client-side filtering.
+        """
+        filter_expressions = []
+        expression_parameters = []
+
+        # Add level filter expression
+        if self.min_level > Log.DEBUG:
+            filter_expressions.append('level >= %0')
+            expression_parameters.append(str(self.min_level))
+
+        # Add logger name filter expression
+        if self.logger_filter:
+            param_index = len(expression_parameters)
+            filter_expressions.append(f'name = %{param_index}')
+            # String parameters need to be quoted for DDS SQL filter
+            expression_parameters.append(f"'{self.logger_filter}'")
+
+        # Only set content filter if we have filter expressions
+        if filter_expressions:
+            filter_expression = ' AND '.join(filter_expressions)
+            try:
+                self.subscription.set_content_filter(filter_expression, expression_parameters)
+                # Check if content filtering was successfully enabled
+                if self.subscription.is_cft_enabled:
+                    if self.debug:
+                        print(
+                            f'Content filter enabled: {filter_expression} with parameters '
+                            f'{expression_parameters}')
+                else:
+                    if self.debug:
+                        print(
+                            'Content filtering not supported by RMW implementation. '
+                            'Falling back to client-side filtering.')
+            except Exception as ex:
+                # Content filtering may not be supported by the RMW implementation
+                if self.debug:
+                    print(
+                        f'Failed to set content filter: {ex}. '
+                        'Falling back to client-side filtering.')
 
     def _log_callback(self, msg: Log):
         """Process log messages."""
