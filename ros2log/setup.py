@@ -44,6 +44,7 @@ The package provides the log command for the ROS 2 command line tools.""",
             'ros2log.verb = ros2log.verb:VerbExtension',
         ],
         'ros2log.verb': [
+            'list = ros2log.verb.list:ListVerb',
             'watch = ros2log.verb.watch:WatchVerb',
         ],
     },
