@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 from typing import List
 
 from ros2cli.node.strategy import add_arguments
 from ros2cli.node.strategy import NodeStrategy
+from ros2log.verb import VerbExtension
 from ros2node.api import get_node_names
 from ros2node.api import NodeName
-
-from ros2log.verb import VerbExtension
 
 
 LOGGER_GET_SERVICE_SUFFIX = '/get_logger_levels'
@@ -30,13 +28,15 @@ LOGGER_SET_SERVICE_TYPE = 'rcl_interfaces/srv/SetLoggerLevels'
 
 
 def _get_nodes_with_logger_services(*, node, include_hidden_nodes: bool = False) -> List[NodeName]:
+    """Return nodes that expose both get/set logger level services."""
     node_names = get_node_names(node=node, include_hidden_nodes=include_hidden_nodes)
     return [n for n in node_names if _node_has_logger_services(node, n)]
 
 
 def _node_has_logger_services(node, node_name: NodeName) -> bool:
+    """Check if a node provides both get/set logger level services."""
     services = node.get_service_names_and_types_by_node(node_name.name, node_name.namespace)
-    service_map = {service_name: types for service_name, types in services}
+    service_map = dict(services)
 
     expected_get = f'{node_name.full_name}{LOGGER_GET_SERVICE_SUFFIX}'
     expected_set = f'{node_name.full_name}{LOGGER_SET_SERVICE_SUFFIX}'
@@ -48,6 +48,7 @@ def _node_has_logger_services(node, node_name: NodeName) -> bool:
 
 
 def _service_has_type(service_map, service_name: str, service_type: str) -> bool:
+    """Check if a service exists and matches the expected type."""
     types = service_map.get(service_name)
     if not types:
         return False
@@ -58,9 +59,11 @@ class ListVerb(VerbExtension):
     """Output a list of nodes with logger services enabled."""
 
     def add_arguments(self, parser, cli_name):
+        """Add CLI arguments for the list verb."""
         add_arguments(parser)
 
     def main(self, *, args):
+        """Execute the list verb."""
         with NodeStrategy(args) as node:
             node_names = _get_nodes_with_logger_services(node=node)
 

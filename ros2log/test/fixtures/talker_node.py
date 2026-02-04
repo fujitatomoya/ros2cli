@@ -24,7 +24,7 @@ class TalkerNode(Node):
     """Test node that publishes messages and generates logs."""
 
     def __init__(self):
-        super().__init__('talker')
+        super().__init__('talker', enable_logger_service=True)
         self.publisher_ = self.create_publisher(String, 'chatter', 10)
         self.timer = self.create_timer(0.5, self.timer_callback)
         self.count = 0
