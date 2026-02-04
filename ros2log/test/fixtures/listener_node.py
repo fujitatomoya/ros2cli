@@ -24,7 +24,7 @@ class ListenerNode(Node):
     """Test node that subscribes to messages and generates logs."""
 
     def __init__(self):
-        super().__init__('listener')
+        super().__init__('listener', enable_logger_service=True)
         self.subscription = self.create_subscription(
             String,
             'chatter',
