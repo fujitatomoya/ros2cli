@@ -60,7 +60,6 @@ def generate_test_description(rmw_implementation):
 
     path_to_talker_node_script = os.path.join(path_to_fixtures, 'talker_node.py')
     path_to_listener_node_script = os.path.join(path_to_fixtures, 'listener_node.py')
-    path_to_no_logger_node_script = os.path.join(path_to_fixtures, 'no_logger_service_node.py')
 
     talker_node_action = Node(
         executable=sys.executable,
@@ -72,11 +71,6 @@ def generate_test_description(rmw_implementation):
         executable=sys.executable,
         arguments=[path_to_listener_node_script],
         name='listener',
-    )
-    no_logger_node_action = Node(
-        executable=sys.executable,
-        arguments=[path_to_no_logger_node_script],
-        name='no_logger_service',
     )
 
     return LaunchDescription([
@@ -104,7 +98,6 @@ def generate_test_description(rmw_implementation):
                     on_exit=[
                         talker_node_action,
                         listener_node_action,
-                        no_logger_node_action,
                         launch_testing.actions.ReadyToTest(),
                     ],
                 )
@@ -290,7 +283,6 @@ class TestROS2LogCLI(unittest.TestCase):
         with self.launch_log_command(arguments=['list']) as log_command:
             assert log_command.wait_for_output(functools.partial(
                 launch_testing.tools.expect_output, expected_lines=[
-                    re.compile(r'^/listener$'),
                     re.compile(r'^/talker$'),
                 ], strict=False
             ), timeout=10)
