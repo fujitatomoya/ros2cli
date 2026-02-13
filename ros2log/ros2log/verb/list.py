@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
-
 from ros2cli.node.strategy import add_arguments
 from ros2cli.node.strategy import NodeStrategy
 from ros2log.verb import VerbExtension
@@ -27,10 +25,13 @@ LOGGER_GET_SERVICE_TYPE = 'rcl_interfaces/srv/GetLoggerLevels'
 LOGGER_SET_SERVICE_TYPE = 'rcl_interfaces/srv/SetLoggerLevels'
 
 
-def _get_nodes_with_logger_services(*, node, include_hidden_nodes: bool = False) -> List[NodeName]:
-    """Return nodes that expose both get/set logger level services."""
+def _print_nodes_with_logger_services(*, node, include_hidden_nodes: bool = False):
+    """Print node names that expose both get/set logger level services."""
     node_names = get_node_names(node=node, include_hidden_nodes=include_hidden_nodes)
-    return [n for n in node_names if _node_has_logger_services(node, n)]
+    for node_name in node_names:
+        if _node_has_logger_services(node, node_name):
+            print(node_name.full_name)
+    return
 
 
 def _node_has_logger_services(node, node_name: NodeName) -> bool:
@@ -65,9 +66,5 @@ class ListVerb(VerbExtension):
     def main(self, *, args):
         """Execute the list verb."""
         with NodeStrategy(args) as node:
-            node_names = _get_nodes_with_logger_services(node=node)
-
-        if node_names:
-            sorted_names = sorted(n.full_name for n in node_names)
-            print(*sorted_names, sep='\n')
+            _print_nodes_with_logger_services(node=node)
         return 0
