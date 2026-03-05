@@ -278,6 +278,34 @@ class TestROS2LogCLI(unittest.TestCase):
         assert log_command.wait_for_shutdown(timeout=10)
 
     @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_levels_basic(self):
+        """Test ros2 log levels command."""
+        with self.launch_log_command(arguments=['levels']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^UNSET\s+:.*'),
+                    re.compile(r'^DEBUG\s+:.*'),
+                    re.compile(r'^INFO\s+:.*'),
+                    re.compile(r'^WARN\s+:.*'),
+                    re.compile(r'^ERROR\s+:.*'),
+                    re.compile(r'^FATAL\s+:.*'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_levels_with_value(self):
+        """Test ros2 log levels --value command."""
+        with self.launch_log_command(arguments=['levels', '--value']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^UNSET\s+\(\s*\d+\)\s*:.*'),
+                    re.compile(r'^DEBUG\s+\(\s*\d+\)\s*:.*'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
     def test_list_logger_service_nodes(self):
         """Test ros2 log list command."""
         with self.launch_log_command(arguments=['list']) as log_command:
