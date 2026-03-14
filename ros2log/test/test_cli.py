@@ -17,7 +17,10 @@ import functools
 import os
 import re
 import sys
+import time
+from types import SimpleNamespace
 import unittest
+import xmlrpc
 
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess
@@ -38,8 +41,17 @@ import launch_testing_ros.tools
 
 import pytest
 
+from rcl_interfaces.msg import LoggerLevel
+import rclpy
 from rclpy.utilities import get_available_rmw_implementations
 from ros2cli.helpers import get_rmw_additional_env
+from ros2cli.node.direct import DirectNode
+from ros2cli.node.strategy import NodeStrategy
+
+from ros2log.api import call_set_logger_levels
+from ros2log.api import get_logger_name_for_node
+from ros2log.verb.levels import LEVEL_NAME_TO_VALUE
+from ros2node.api import get_node_names
 
 
 # Skip cli tests on Windows while they exhibit pathological behavior
@@ -48,6 +60,9 @@ if sys.platform.startswith('win'):
     pytest.skip(
         'CLI tests can block for a pathological amount of time on Windows.',
         allow_module_level=True)
+
+
+TEST_TIMEOUT = 20.0
 
 
 @pytest.mark.rostest
@@ -134,6 +149,60 @@ class TestROS2LogCLI(unittest.TestCase):
             ) as log_command:
                 yield log_command
         cls.launch_log_command = launch_log_command
+
+    def setUp(self):
+        start_time = time.time()
+        timed_out = True
+        with NodeStrategy(None) as node:
+            while (time.time() - start_time) < TEST_TIMEOUT:
+                try:
+                    node_names = {
+                        discovered_node.full_name
+                        for discovered_node in get_node_names(node=node)
+                    }
+                    talker_services = node.get_service_names_and_types_by_node('talker', '/')
+                except rclpy.node.NodeNameNonExistentError:
+                    continue
+                except ConnectionRefusedError:
+                    continue
+                except xmlrpc.client.Fault as exc:
+                    if 'NodeNameNonExistentError' in exc.faultString:
+                        continue
+                    raise
+
+                talker_service_names = {name for name, _ in talker_services}
+                if (
+                    '/talker' in node_names and
+                    '/listener' in node_names and
+                    '/talker/get_logger_levels' in talker_service_names and
+                    '/talker/set_logger_levels' in talker_service_names
+                ):
+                    timed_out = False
+                    break
+
+        if timed_out:
+            self.fail(f'CLI daemon failed to find test nodes after {TEST_TIMEOUT} seconds')
+
+        self._set_logger_level_directly('/talker', 'UNSET')
+
+    def _set_logger_level_directly(self, node_name, level_name):
+        args = SimpleNamespace(argv=[], spin_time=0.1)
+        logger_level = LoggerLevel()
+        logger_level.name = get_logger_name_for_node(node_name)
+        logger_level.level = LEVEL_NAME_TO_VALUE[level_name]
+
+        with DirectNode(args) as node:
+            results_by_node = call_set_logger_levels(
+                node=node,
+                levels_by_node={node_name: [logger_level]},
+            )
+
+        result = results_by_node[node_name]
+        if isinstance(result, Exception):
+            self.fail(f'Failed to set logger level directly: {result}')
+
+        self.assertEqual(1, len(result))
+        self.assertTrue(result[0].successful, result[0].reason)
 
     @launch_testing.markers.retry_on_failure(times=2, delay=1)
     def test_watch_basic(self):
@@ -316,3 +385,76 @@ class TestROS2LogCLI(unittest.TestCase):
             ), timeout=10)
         assert log_command.wait_for_shutdown(timeout=10)
         assert '/no_logger_service' not in log_command.output
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_get_single_node(self):
+        """Test ros2 log get for a single node."""
+        with self.launch_log_command(arguments=['get', '/talker']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^UNSET$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_get_all_nodes(self):
+        """Test ros2 log get --all."""
+        with self.launch_log_command(arguments=['get', '--all']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^/talker: UNSET$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+        assert '/listener:' not in log_command.output
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_get_reports_missing_logger_service(self):
+        """Test ros2 log get on a node without logger services."""
+        with self.launch_log_command(arguments=['get', '/listener']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r"Logger service not available for node '/listener'\."),
+                    re.compile(r'.*enable_logger_service.*'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_set_single_node(self):
+        """Test ros2 log set for a single node."""
+        with self.launch_log_command(arguments=['set', '/talker', 'DEBUG']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^Set logger level successful$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+        with self.launch_log_command(arguments=['get', '/talker']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^DEBUG$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+    @launch_testing.markers.retry_on_failure(times=2, delay=1)
+    def test_set_all_nodes(self):
+        """Test ros2 log set --all."""
+        with self.launch_log_command(arguments=['set', '--all', 'ERROR']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^/talker: Set logger level successful$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
+
+        with self.launch_log_command(arguments=['get', '--all']) as log_command:
+            assert log_command.wait_for_output(functools.partial(
+                launch_testing.tools.expect_output, expected_lines=[
+                    re.compile(r'^/talker: ERROR$'),
+                ], strict=False
+            ), timeout=10)
+        assert log_command.wait_for_shutdown(timeout=10)
