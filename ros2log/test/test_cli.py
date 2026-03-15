@@ -18,7 +18,6 @@ import os
 import re
 import sys
 import time
-from types import SimpleNamespace
 import unittest
 import xmlrpc
 
@@ -41,16 +40,11 @@ import launch_testing_ros.tools
 
 import pytest
 
-from rcl_interfaces.msg import LoggerLevel
 import rclpy
 from rclpy.utilities import get_available_rmw_implementations
 from ros2cli.helpers import get_rmw_additional_env
-from ros2cli.node.direct import DirectNode
 from ros2cli.node.strategy import NodeStrategy
 
-from ros2log.api import call_set_logger_levels
-from ros2log.api import get_logger_name_for_node
-from ros2log.verb.levels import LEVEL_NAME_TO_VALUE
 from ros2node.api import get_node_names
 
 
@@ -131,21 +125,32 @@ class TestROS2LogCLI(unittest.TestCase):
         proc_output,
         rmw_implementation
     ):
+        cls.path_to_set_logger_level_script = os.path.join(
+            os.path.dirname(__file__), 'fixtures', 'set_logger_level.py')
         rmw_implementation_filter = launch_testing_ros.tools.basic_output_filter(
             filtered_patterns=['WARNING:.*'],
             filtered_rmw_implementation=rmw_implementation
         )
 
         @contextlib.contextmanager
-        def launch_log_command(self, arguments):
-            log_command_action = ExecuteProcess(
-                cmd=['ros2', 'log', *arguments],
-                name='ros2log-cli',
+        def launch_process_command(self, command, *, name):
+            command_action = ExecuteProcess(
+                cmd=command,
+                name=name,
                 output='screen'
             )
             with launch_testing.tools.launch_process(
-                launch_service, log_command_action, proc_info, proc_output,
+                launch_service, command_action, proc_info, proc_output,
                 output_filter=rmw_implementation_filter
+            ) as command_process:
+                yield command_process
+        cls.launch_process_command = launch_process_command
+
+        @contextlib.contextmanager
+        def launch_log_command(self, arguments):
+            with self.launch_process_command(
+                ['ros2', 'log', *arguments],
+                name='ros2log-cli',
             ) as log_command:
                 yield log_command
         cls.launch_log_command = launch_log_command
@@ -186,23 +191,19 @@ class TestROS2LogCLI(unittest.TestCase):
         self._set_logger_level_directly('/talker', 'UNSET')
 
     def _set_logger_level_directly(self, node_name, level_name):
-        args = SimpleNamespace(argv=[], spin_time=0.1)
-        logger_level = LoggerLevel()
-        logger_level.name = get_logger_name_for_node(node_name)
-        logger_level.level = LEVEL_NAME_TO_VALUE[level_name]
+        # Launch a fresh helper process so each parametrized RMW test gets a
+        # clean rclpy context instead of reusing the one from a previous run.
+        with self.launch_process_command(
+            [sys.executable, self.path_to_set_logger_level_script, node_name, level_name],
+            name='ros2log-set-level-helper',
+        ) as helper_command:
+            assert helper_command.wait_for_shutdown(timeout=TEST_TIMEOUT)
 
-        with DirectNode(args) as node:
-            results_by_node = call_set_logger_levels(
-                node=node,
-                levels_by_node={node_name: [logger_level]},
+        if helper_command.exit_code != launch_testing.asserts.EXIT_OK:
+            self.fail(
+                'Failed to set logger level directly:\n'
+                f'{helper_command.output}'
             )
-
-        result = results_by_node[node_name]
-        if isinstance(result, Exception):
-            self.fail(f'Failed to set logger level directly: {result}')
-
-        self.assertEqual(1, len(result))
-        self.assertTrue(result[0].successful, result[0].reason)
 
     @launch_testing.markers.retry_on_failure(times=2, delay=1)
     def test_watch_basic(self):
