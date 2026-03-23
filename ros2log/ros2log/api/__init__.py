@@ -158,8 +158,8 @@ def call_get_logger_levels(
         request.names = list(logger_names)
         futures[node_name] = client.call_async(request)
 
-    for future in futures.values():
-        rclpy.spin_until_future_complete(node, future)
+    while futures and not all(future.done() for future in futures.values()):
+        rclpy.spin_once(node, timeout_sec=0.1)
 
     for node_name, future in futures.items():
         if future.result() is not None:
@@ -198,8 +198,8 @@ def call_set_logger_levels(
         request.levels = list(levels)
         futures[node_name] = client.call_async(request)
 
-    for future in futures.values():
-        rclpy.spin_until_future_complete(node, future)
+    while futures and not all(future.done() for future in futures.values()):
+        rclpy.spin_once(node, timeout_sec=0.1)
 
     for node_name, future in futures.items():
         if future.result() is not None:
