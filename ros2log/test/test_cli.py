@@ -57,6 +57,7 @@ if sys.platform.startswith('win'):
 
 
 TEST_TIMEOUT = 20.0
+DISCOVERY_POLL_INTERVAL = 0.1
 
 
 @pytest.mark.rostest
@@ -167,11 +168,14 @@ class TestROS2LogCLI(unittest.TestCase):
                     }
                     talker_services = node.get_service_names_and_types_by_node('talker', '/')
                 except rclpy.node.NodeNameNonExistentError:
+                    time.sleep(DISCOVERY_POLL_INTERVAL)
                     continue
                 except ConnectionRefusedError:
+                    time.sleep(DISCOVERY_POLL_INTERVAL)
                     continue
                 except xmlrpc.client.Fault as exc:
                     if 'NodeNameNonExistentError' in exc.faultString:
+                        time.sleep(DISCOVERY_POLL_INTERVAL)
                         continue
                     raise
 
@@ -184,6 +188,7 @@ class TestROS2LogCLI(unittest.TestCase):
                 ):
                     timed_out = False
                     break
+                time.sleep(DISCOVERY_POLL_INTERVAL)
 
         if timed_out:
             self.fail(f'CLI daemon failed to find test nodes after {TEST_TIMEOUT} seconds')
