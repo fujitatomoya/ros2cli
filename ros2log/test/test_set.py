@@ -36,8 +36,7 @@ class TestSetVerb(unittest.TestCase):
 
     def test_requires_node_name_or_all(self):
         verb = SetVerb()
-        args = SimpleNamespace(
-            all=False, node_name=None, include_hidden_nodes=False, level='INFO')
+        args = SimpleNamespace(all=False, node_name=None, level='INFO')
 
         self.assertEqual(
             'Either a node name or --all must be specified',
@@ -46,8 +45,7 @@ class TestSetVerb(unittest.TestCase):
 
     def test_rejects_node_name_with_all(self):
         verb = SetVerb()
-        args = SimpleNamespace(
-            all=True, node_name='/talker', include_hidden_nodes=False, level='INFO')
+        args = SimpleNamespace(all=True, node_name='/talker', level='INFO')
 
         self.assertEqual(
             'Node name cannot be used with --all',
@@ -73,8 +71,7 @@ class TestSetVerb(unittest.TestCase):
         }
 
         verb = SetVerb()
-        args = SimpleNamespace(
-            all=False, node_name='/talker', include_hidden_nodes=False, level='DEBUG')
+        args = SimpleNamespace(all=False, node_name='/talker', level='DEBUG')
 
         captured = StringIO()
         sys.stdout = captured
@@ -106,8 +103,7 @@ class TestSetVerb(unittest.TestCase):
         }
 
         verb = SetVerb()
-        args = SimpleNamespace(
-            all=True, node_name=None, include_hidden_nodes=False, level='WARN')
+        args = SimpleNamespace(all=True, node_name=None, level='WARN')
 
         captured = StringIO()
         sys.stdout = captured
@@ -142,8 +138,7 @@ class TestSetVerb(unittest.TestCase):
         }
 
         verb = SetVerb()
-        args = SimpleNamespace(
-            all=False, node_name='/talker', include_hidden_nodes=False, level='ERROR')
+        args = SimpleNamespace(all=False, node_name='/talker', level='ERROR')
 
         captured = StringIO()
         sys.stderr = captured

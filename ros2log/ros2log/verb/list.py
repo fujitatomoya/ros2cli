@@ -24,16 +24,10 @@ class ListVerb(VerbExtension):
     def add_arguments(self, parser, cli_name):
         """Add CLI arguments for the list verb."""
         add_arguments(parser)
-        parser.add_argument(
-            '--include-hidden-nodes', action='store_true',
-            help='Consider hidden nodes as well')
 
     def main(self, *, args):
         """Execute the list verb."""
         with NodeStrategy(args) as node:
-            for node_name in iter_logger_service_nodes(
-                node=node,
-                include_hidden_nodes=args.include_hidden_nodes,
-            ):
+            for node_name in iter_logger_service_nodes(node=node):
                 print(node_name.full_name)
         return 0

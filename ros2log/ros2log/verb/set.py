@@ -36,14 +36,10 @@ class SetVerb(VerbExtension):
         parser.add_argument(
             '--all', '-a', action='store_true',
             help='Set log levels for all nodes with logger services enabled')
-        parser.add_argument(
-            '--include-hidden-nodes', action='store_true',
-            help='Consider hidden nodes as well')
         arg = parser.add_argument(
             'node_name', nargs='?',
             help='Name of the ROS node')
-        arg.completer = NodeNameCompleter(
-            include_hidden_nodes_key='include_hidden_nodes')
+        arg.completer = NodeNameCompleter()
         parser.add_argument(
             'level',
             type=str.upper,
@@ -59,7 +55,6 @@ class SetVerb(VerbExtension):
             nodes_to_query, error = get_target_node_names(
                 node=node,
                 node_name=args.node_name,
-                include_hidden_nodes=args.include_hidden_nodes,
                 all_nodes=args.all,
             )
 

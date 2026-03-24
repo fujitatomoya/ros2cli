@@ -67,32 +67,26 @@ def format_logger_service_unavailable_error(node_name: str) -> str:
 def iter_logger_service_nodes(
     *,
     node,
-    include_hidden_nodes: bool = False,
 ) -> Iterator[NodeName]:
     """Yield nodes that expose the logger get/set services as they are discovered."""
-    for node_name in get_node_names(node=node, include_hidden_nodes=include_hidden_nodes):
+    for node_name in get_node_names(node=node):
         if node_has_logger_services(node, node_name):
             yield node_name
 
 
-def get_logger_service_nodes(*, node, include_hidden_nodes: bool = False) -> list[NodeName]:
+def get_logger_service_nodes(*, node) -> list[NodeName]:
     """Return all nodes that expose the logger get/set services."""
-    return list(iter_logger_service_nodes(
-        node=node,
-        include_hidden_nodes=include_hidden_nodes,
-    ))
+    return list(iter_logger_service_nodes(node=node))
 
 
 def get_target_node_names(
     *,
     node,
     node_name: str | None = None,
-    include_hidden_nodes: bool = False,
     all_nodes: bool = False,
 ) -> tuple[list[str] | None, str | None]:
     """Resolve the node names targeted by a get/set command."""
-    logger_service_nodes = get_logger_service_nodes(
-        node=node, include_hidden_nodes=include_hidden_nodes)
+    logger_service_nodes = get_logger_service_nodes(node=node)
     logger_service_node_names = {
         logger_node.full_name for logger_node in logger_service_nodes
     }
@@ -102,9 +96,7 @@ def get_target_node_names(
 
     absolute_node_name = get_absolute_node_name(node_name)
     all_node_names = {
-        discovered_node.full_name
-        for discovered_node in get_node_names(
-            node=node, include_hidden_nodes=include_hidden_nodes)
+        discovered_node.full_name for discovered_node in get_node_names(node=node)
     }
 
     if absolute_node_name not in all_node_names:

@@ -36,7 +36,7 @@ class TestGetVerb(unittest.TestCase):
 
     def test_requires_node_name_or_all(self):
         verb = GetVerb()
-        args = SimpleNamespace(all=False, node_name=None, include_hidden_nodes=False)
+        args = SimpleNamespace(all=False, node_name=None)
 
         self.assertEqual(
             'Either a node name or --all must be specified',
@@ -45,7 +45,7 @@ class TestGetVerb(unittest.TestCase):
 
     def test_rejects_node_name_with_all(self):
         verb = GetVerb()
-        args = SimpleNamespace(all=True, node_name='/talker', include_hidden_nodes=False)
+        args = SimpleNamespace(all=True, node_name='/talker')
 
         self.assertEqual(
             'Node name cannot be used with --all',
@@ -71,7 +71,7 @@ class TestGetVerb(unittest.TestCase):
         }
 
         verb = GetVerb()
-        args = SimpleNamespace(all=False, node_name='/talker', include_hidden_nodes=False)
+        args = SimpleNamespace(all=False, node_name='/talker')
 
         captured = StringIO()
         sys.stdout = captured
@@ -103,7 +103,7 @@ class TestGetVerb(unittest.TestCase):
         }
 
         verb = GetVerb()
-        args = SimpleNamespace(all=True, node_name=None, include_hidden_nodes=False)
+        args = SimpleNamespace(all=True, node_name=None)
 
         captured = StringIO()
         sys.stdout = captured
@@ -134,7 +134,7 @@ class TestGetVerb(unittest.TestCase):
         }
 
         verb = GetVerb()
-        args = SimpleNamespace(all=False, node_name='/talker', include_hidden_nodes=False)
+        args = SimpleNamespace(all=False, node_name='/talker')
 
         self.assertEqual(
             "Exception while calling service of node '/talker': boom",
