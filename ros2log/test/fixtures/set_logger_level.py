@@ -21,6 +21,9 @@ from rcl_interfaces.msg import LoggerLevel
 from rcl_interfaces.srv import SetLoggerLevels
 import rclpy
 
+from ros2log.api import get_logger_name_for_node
+from ros2node.api import get_absolute_node_name
+
 
 LEVEL_NAME_TO_VALUE = {
     'UNSET': LoggerLevel.LOG_LEVEL_UNKNOWN,
@@ -30,18 +33,6 @@ LEVEL_NAME_TO_VALUE = {
     'ERROR': LoggerLevel.LOG_LEVEL_ERROR,
     'FATAL': LoggerLevel.LOG_LEVEL_FATAL,
 }
-
-
-def get_absolute_node_name(node_name: str) -> str:
-    """Return the fully qualified node name."""
-    if not node_name:
-        raise ValueError('node_name must not be empty')
-    return node_name if node_name.startswith('/') else f'/{node_name}'
-
-
-def get_logger_name_for_node(node_name: str) -> str:
-    """Convert a fully qualified node name into its root logger name."""
-    return get_absolute_node_name(node_name).lstrip('/').replace('/', '.')
 
 
 def main(argv=None):
