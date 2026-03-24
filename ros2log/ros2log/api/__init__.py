@@ -32,14 +32,21 @@ LOGGER_GET_SERVICE_TYPE = 'rcl_interfaces/srv/GetLoggerLevels'
 LOGGER_SET_SERVICE_TYPE = 'rcl_interfaces/srv/SetLoggerLevels'
 
 
+def _require_absolute_node_name(node_name: str) -> str:
+    absolute_node_name = get_absolute_node_name(node_name)
+    if absolute_node_name is None:
+        raise ValueError('node_name must not be empty')
+    return absolute_node_name
+
+
 def get_get_logger_levels_service_name(node_name: str) -> str:
     """Return the get-logger-levels service name for a node."""
-    return f'{get_absolute_node_name(node_name)}{LOGGER_GET_SERVICE_SUFFIX}'
+    return f'{_require_absolute_node_name(node_name)}{LOGGER_GET_SERVICE_SUFFIX}'
 
 
 def get_set_logger_levels_service_name(node_name: str) -> str:
     """Return the set-logger-levels service name for a node."""
-    return f'{get_absolute_node_name(node_name)}{LOGGER_SET_SERVICE_SUFFIX}'
+    return f'{_require_absolute_node_name(node_name)}{LOGGER_SET_SERVICE_SUFFIX}'
 
 
 def get_logger_name_for_node(node_name: str) -> str:
@@ -49,15 +56,13 @@ def get_logger_name_for_node(node_name: str) -> str:
     ROS node logger names use dot-separated namespaces, e.g. `/demo/talker`
     becomes `demo.talker`.
     """
-    absolute_node_name = get_absolute_node_name(node_name)
-    if absolute_node_name is None:
-        raise ValueError('node_name must not be empty')
+    absolute_node_name = _require_absolute_node_name(node_name)
     return absolute_node_name.lstrip('/').replace('/', '.')
 
 
 def format_logger_service_unavailable_error(node_name: str) -> str:
     """Return the user-facing error for nodes without logger services."""
-    absolute_node_name = get_absolute_node_name(node_name)
+    absolute_node_name = _require_absolute_node_name(node_name)
     return (
         f"Logger service not available for node '{absolute_node_name}'.\n"
         "The 'enable_logger_service' node option must be enabled for this node."
